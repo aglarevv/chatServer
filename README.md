@@ -1,6 +1,5 @@
 # chatServer
-使用c++实现的聊天服务器，依赖muduo网络库，nlohmann的json库
-目前只支持在同一服务器上通信
+使用c++实现的聊天服务器，依赖muduo网络库，nlohmann的json库, 目前只支持在同一服务器上通信
 
 ## 功能
 
@@ -28,10 +27,14 @@ make
 ```
 
 ## 数据库结构
-
-
+![image](https://github.com/aglarevv/chatServer/blob/main/image/database.png)
+![image](https://github.com/aglarevv/chatServer/blob/main/image/ALLGroup.png)
+![image](https://github.com/aglarevv/chatServer/blob/main/image/Friend.png)
+![image](https://github.com/aglarevv/chatServer/blob/main/image/GroupUser.png)
+![image](https://github.com/aglarevv/chatServer/blob/main/image/OfflineMessage.png)
+![image](https://github.com/aglarevv/chatServer/blob/main/image/User.png)
 
 ## 即将添加的功能
 
--引入负载均衡器，提高并发量
--支持跨服务器通信
+- 引入负载均衡器，提高并发量
+- 支持跨服务器通信
