@@ -1,6 +1,7 @@
 #include "ChatServer.hpp"
 #include "ChatService.hpp"
 #include <iostream>
+#include <string>
 #include <signal.h>
 
 void reset(int){
@@ -9,9 +10,11 @@ void reset(int){
 }
 
 
-int main(){
+int main(int argc, char* argv[]){
+    std::string ip = argv[1];
+    uint16_t port = atoi(argv[2]);
     signal(SIGINT, reset);
-    InetAddress addr("127.0.0.1",8888);
+    InetAddress addr(ip, port);
     EventLoop loop;
     ChatServer server(&loop, addr, "chatServer");
     server.start();

@@ -2,6 +2,7 @@
 
 #include "muduo/net/TcpServer.h"
 #include "json.hpp"
+#include "redis.hpp"
 using json = nlohmann::json;
 
 #include <functional>
@@ -9,6 +10,7 @@ using json = nlohmann::json;
 #include <unordered_map>
 #include <map>
 #include <string>
+
 
 class GroupModel;
 class FriendModel;
@@ -36,6 +38,8 @@ class ChatService {
         void addGroup(const muduo::net::TcpConnectionPtr& conn, json& js, muduo::Timestamp time);
         //群组聊天
         void chatGroup(const muduo::net::TcpConnectionPtr& conn, json& js, muduo::Timestamp time);
+        //redis回调
+        void redisHandleMessage(std::string channel, std::string message);
         //获取对应的业务处理方法
         MsgHandle getHandle(int msgType); 
         //客户端连接异常断开处理
@@ -50,11 +54,15 @@ class ChatService {
         std::mutex mutex_;
         //保存用户及对应的连接
         std::map<std::string, muduo::net::TcpConnectionPtr> userConnMap_;
+        //保存用户id和name
+        std::map<int, std::string> userIdName_;
 
         //数据库操作
         UserModel* userModel_;
         OfflineMessageModel* OfflineMessageModel_;
         FriendModel* friendModel_;
         GroupModel* groupModel_;
+
+        Redis redis_;
 };
 

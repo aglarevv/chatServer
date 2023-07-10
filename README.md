@@ -1,5 +1,5 @@
 # chatServer
-使用c++实现的聊天服务器，依赖muduo网络库，nlohmann的json库, 目前只支持在同一服务器上通信
+使用c++实现的集群聊天服务器
 
 ## 功能
 
@@ -12,18 +12,20 @@
 - 群组聊天
 
 
-## 环境要求
+## 环境要求/依赖项
 
 - Linux
 - C++11
+- gcc/g++ 7.5
+- redis
+- nginx
+- muduo
+- nlohmann的json库
 
 ## 项目启动
 
 ```
-mkdir build
-cd build
-cmake ../CMakeLists.txt
-make
+./autobuild.sh
 ```
 
 ## 数据库结构
@@ -34,7 +36,14 @@ make
 ![image](https://github.com/aglarevv/chatServer/blob/main/image/OfflineMessage.png)
 ![image](https://github.com/aglarevv/chatServer/blob/main/image/User.png)
 
+## 更新内容
+
+```
+引入redis消息队列中间件，用以跨服务器通信
+```
+
 ## 即将添加的功能
 
-- 引入负载均衡器，提高并发量
-- 支持跨服务器通信
+- 引入数据库连接池
+- 增加客户端图形界面
+

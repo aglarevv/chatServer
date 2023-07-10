@@ -7,6 +7,7 @@
 #include "FriendModel.hpp"
 #include "GroupModel.hpp"
 #include "ALLGroup.hpp"
+#include "redis.hpp"
 
 #include <iostream>
 //对外实例化方法
@@ -72,6 +73,12 @@ ChatService::ChatService(){
         std::placeholders::_2,
         std::placeholders::_3)}
     );
+    //redis
+    if(redis_.connect()){
+        redis_.initNotifyMessageHandle(std::bind(&ChatService::redisHandleMessage, this,
+        std::placeholders::_1,
+        std::placeholders::_2));
+    }
 }
 //登录
 void ChatService::login(const muduo::net::TcpConnectionPtr& conn, json& js, muduo::Timestamp time){
@@ -94,6 +101,7 @@ void ChatService::login(const muduo::net::TcpConnectionPtr& conn, json& js, mudu
                 std::unique_lock<std::mutex> lock(mutex_);
                 userConnMap_.insert({name, conn});
             }
+            redis_.subscribe(name);
             user.setState("online");
             userModel_->updataState(user);
             json response;
@@ -160,13 +168,15 @@ void ChatService::login(const muduo::net::TcpConnectionPtr& conn, json& js, mudu
 //登出
 void ChatService::loginout(const muduo::net::TcpConnectionPtr& conn, json& js, muduo::Timestamp time){
     std::string name = js["name"];
-     {
+    int userid = js["id"].get<int>();
+    {
         std::unique_lock<std::mutex> lock(mutex_);
         auto it = userConnMap_.find(name);
         if(it != userConnMap_.end()){
             userConnMap_.erase(it);
         }
     }
+    redis_.unSubscribe(name);
     //断开服务器连接
     User user;
     user.setName(name);
@@ -201,7 +211,7 @@ void ChatService::regist(const muduo::net::TcpConnectionPtr& conn, json& js, mud
 //一对一聊天
 void ChatService::oneChat(const muduo::net::TcpConnectionPtr& conn, json& js, muduo::Timestamp time){
     std::string name = js["toname"];
-    
+    //同一主机
     {
         std::unique_lock<std::mutex> lock(mutex_);
         auto it = userConnMap_.find(name);
@@ -210,11 +220,15 @@ void ChatService::oneChat(const muduo::net::TcpConnectionPtr& conn, json& js, mu
             it->second->send(js.dump());
             return;
         }
-        else{
-            //不在线，保存到离线消息
-            OfflineMessageModel_->insert(name, js.dump());
-        }
     }
+    //不同主机
+    User user = userModel_->query(name);
+    if(user.getState() == "online"){
+        redis_.publish(user.getName(), js.dump());
+        return;
+    }
+    //不在线
+    OfflineMessageModel_->insert(name, js.dump());
 }
 //添加好友
 void ChatService::addFriend(const muduo::net::TcpConnectionPtr& conn, json& js, muduo::Timestamp time){
@@ -264,9 +278,26 @@ void ChatService::chatGroup(const muduo::net::TcpConnectionPtr& conn, json& js, 
             it->second->send(js.dump());
         }
         else{
-            OfflineMessageModel_->insert(user, js.dump());
+            //不同主机
+            User u = userModel_->query(user);
+            if(u.getState() == "online"){
+                redis_.publish(u.getName(), js.dump());
+            }
+            else{
+                OfflineMessageModel_->insert(user, js.dump());
+            }
         }
     }
+}
+//redis
+void ChatService::redisHandleMessage(std::string channel, std::string message){
+    std::unique_lock<std::mutex> lock(mutex_);
+    auto it = userConnMap_.find(channel);
+    if(it != userConnMap_.end()){
+        it->second->send(message);
+        return;
+    }
+    OfflineMessageModel_->insert(channel, message);
 }
 //业务分发
 ChatService::MsgHandle ChatService::getHandle(int msgType){
@@ -295,6 +326,7 @@ void ChatService::clientCloseException(const muduo::net::TcpConnectionPtr& conn)
             }
         }
     }
+    redis_.unSubscribe(user.getName());
     //断开服务器连接
     if(user.getName() != ""){
         user.setState("offline");
