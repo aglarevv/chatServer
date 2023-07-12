@@ -6,6 +6,7 @@
 using namespace muduo::net;
 using namespace muduo;
 
+class ConnectionPool;
 class ChatServer {
     public:
         ChatServer(EventLoop* loop, const InetAddress& listenAddr, const string& nameArg);
@@ -17,5 +18,5 @@ class ChatServer {
 
         EventLoop* loop_;
         TcpServer server_;
-
+        ConnectionPool* connectionPool_;
 };

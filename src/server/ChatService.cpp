@@ -10,6 +10,7 @@
 #include "redis.hpp"
 
 #include <iostream>
+
 //对外实例化方法
 ChatService* ChatService::instance(){
     static ChatService server;
@@ -235,8 +236,20 @@ void ChatService::addFriend(const muduo::net::TcpConnectionPtr& conn, json& js, 
     int userid = js["id"].get<int>();
     std::string username = js["name"];
     int friendId = js["friendid"].get<int>();
-
-    friendModel_->insert(userid, username, friendId);
+    json responsejs;
+    if(friendModel_->insert(userid, username, friendId)){
+        responsejs["msgtype"] = GROUP_CREATE_ACK;
+        responsejs["errno"] = 0;
+        responsejs["errmsg"] = "添加成功";
+        conn->send(responsejs.dump());
+    }
+    else{
+        responsejs["msgtype"] = GROUP_CREATE_ACK;
+        responsejs["errno"] = 1;
+        responsejs["errmsg"] = "添加失败";
+        conn->send(responsejs.dump());
+    }
+    
 }
 //创建群组
 void ChatService::createGroup(const muduo::net::TcpConnectionPtr& conn, json& js, muduo::Timestamp time){
@@ -245,8 +258,19 @@ void ChatService::createGroup(const muduo::net::TcpConnectionPtr& conn, json& js
     std::string groupname = js["groupname"];
     std::string desc = js["groupdesc"];
     AllGroup group(-1, groupname, desc);
+    json responsejs;
     if(groupModel_->create(group)){
         groupModel_->add(group.getGroupId(), userid, username ,"creator");
+        responsejs["msgtype"] = GROUP_CREATE_ACK;
+        responsejs["errno"] = 0;
+        responsejs["errmsg"] = "创建成功";
+        conn->send(responsejs.dump());
+    }
+    else{
+        responsejs["msgtype"] = GROUP_CREATE_ACK;
+        responsejs["errno"] = 1;
+        responsejs["errmsg"] = "创建失败";
+        conn->send(responsejs.dump());
     }
 }
 //加入群组
@@ -264,6 +288,15 @@ void ChatService::addGroup(const muduo::net::TcpConnectionPtr& conn, json& js, m
         responsejs["errmsg"] = "加入失败，该群组不存在或已加入";
         conn->send(responsejs.dump());
     }
+    else{
+        responsejs["msgtype"] = GROUP_ADD_ACK;
+        responsejs["errno"] = 0;
+        responsejs["id"] = userid;
+        responsejs["name"] = username;
+        responsejs["errmsg"] = "加入成功";
+        conn->send(responsejs.dump());
+    }
+   
 }
 //群组聊天
 void ChatService::chatGroup(const muduo::net::TcpConnectionPtr& conn, json& js, muduo::Timestamp time){

@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 
+class ConnectionPool;
 class OfflineMessageModel {
     public:
         //存储离线消息

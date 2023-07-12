@@ -5,11 +5,12 @@
 #include <string>
 #include <vector>
 
-
+class ConnectionPool;
 class FriendModel {
     public:
         //添加好友
-        void insert(int userid, std::string username, int friendid);
+        bool insert(int userid, std::string username, int friendid);
         //查询好友
         std::vector<User> query(std::string username);
+
 };

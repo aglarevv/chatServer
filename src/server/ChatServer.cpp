@@ -1,6 +1,7 @@
 #include "ChatServer.hpp"
 #include "json.hpp"
 #include "ChatService.hpp"
+#include "connectionPool.hpp"
 
 #include <functional>
 #include <string>
@@ -17,6 +18,9 @@ ChatServer::ChatServer(EventLoop* loop, const InetAddress& listenAddr, const str
      this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
     //使用4个线程
     server_.setThreadNum(4);
+
+    //获取连接池对象
+    connectionPool_ = ConnectionPool::getConnectionPool();      
 }
 //开启
 void ChatServer::start(){
@@ -24,6 +28,7 @@ void ChatServer::start(){
 }
 //新连接回调
 void ChatServer::onConnection(const TcpConnectionPtr& conn){
+    
     if(!conn->connected()){
         ChatService::instance()->clientCloseException(conn);
         conn->shutdown();

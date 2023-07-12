@@ -111,7 +111,8 @@ int main(int argc, char* argv[]){
     readTask.detach();
 
 
-    while(true){
+    while(1){
+        
         // 显示首页面菜单 登录、注册、退出
         cout << "========================" << endl;
         cout << "1. login" << endl;
@@ -187,9 +188,9 @@ int main(int argc, char* argv[]){
                 close(clientfd);
                 sem_destroy(&sem);
                 exit(0);
-
+            
             default:
-                cout << "invalid input" << endl;
+                cout << "invalid input" << endl;           
                 break;
         }
     }
@@ -299,36 +300,24 @@ void loginResponse(json& responsejs){
 
 //接收服务器消息线程
 void readTaskHandle(int clientfd){
+    std::vector<char> buffer;
     for(;;){
-        char buf[1024] = {0};
-        ssize_t readBytes = read(clientfd, buf, sizeof(buf));
-        if(readBytes == -1 || readBytes == 0){
-            close(clientfd);
-            exit(-1);
-        }
+        buffer.clear();
+        while(true){
+            char buf[1024] = {0};
+            ssize_t readBytes = read(clientfd, buf, sizeof(buf));
+            if(readBytes == -1 || readBytes == 0){
+                close(clientfd);
+                exit(-1);
+            }
+            buffer.insert(buffer.end(), buf, buf+readBytes);
+            if(readBytes < sizeof(buf)){
+                break;
+            }
+        }      
               
-
-        json js = json::parse(buf);
+        json js = json::parse(buffer);
         int msgType = js["msgtype"].get<int>();
-        //单聊
-        if(ONE_CHAT == msgType){
-            cout << js["time"].get<string>() << " [" << js["id"] << "]" << js["name"].get<string>()
-                 << " said: " << js["msg"].get<string>() << endl;
-            continue; 
-        }
-        //群组聊天
-        if(GROUP_CHAT == msgType){
-            cout << "群消息[" << js["groupid"].get<int>() << "]: " << js["time"].get<string>() 
-                 << " [" << js["id"] << "]" << js["name"].get<string>()
-                 << " said: " << js["msg"].get<string>() << endl;
-            continue; 
-        }
-        //加入群组
-        if(GROUP_ADD_ACK == msgType){
-            cout << "errno: " << js["errno"].get<int>() << " [" << js["id"] << "]" << js["name"].get<string>()
-                 << js["errmsg"].get<string>() << endl;
-            continue; 
-        }
         //登录
         if(LOGIN_ACK == msgType){
             loginResponse(js);
@@ -346,6 +335,35 @@ void readTaskHandle(int clientfd){
             sem_post(&sem);
             continue;
         }
+        //创建群组
+        if(GROUP_CREATE_ACK == msgType){
+           cout << "errno: " << js["errno"].get<int>() << js["errmsg"].get<string>() << endl;
+        }
+        //加入群组
+        if(GROUP_ADD_ACK == msgType){
+            cout << "errno: " << js["errno"].get<int>() << " [" << js["id"] << "]" << js["name"].get<string>()
+                 << js["errmsg"].get<string>() << endl;
+            continue; 
+        }
+        //添加好友
+        if(FRIEND_ADD_ACK == msgType){
+           cout << "errno: " << js["errno"].get<int>() << js["errmsg"].get<string>() << endl;
+        }
+        //单聊
+        if(ONE_CHAT == msgType){
+            cout << js["time"].get<string>() << " [" << js["id"] << "]" << js["name"].get<string>()
+                 << " said: " << js["msg"].get<string>() << endl;
+            continue; 
+        }
+        //群组聊天
+        if(GROUP_CHAT == msgType){
+            cout << "群消息[" << js["groupid"].get<int>() << "]: " << js["time"].get<string>() 
+                 << " [" << js["id"] << "]" << js["name"].get<string>()
+                 << " said: " << js["msg"].get<string>() << endl;
+            continue; 
+        }
+        
+        
     }
 }
 
@@ -434,7 +452,6 @@ void addgroup(int clientfd, string groupid){
     js["id"] = currentUser.getId();
     js["name"] = currentUser.getName();
     js["groupid"] = groupId;
-    js["time"] = getCurrentTime();
     string buf = js.dump();
     ssize_t writeBytes = write(clientfd, buf.c_str(), strlen(buf.c_str())+1);
     if(writeBytes == -1){

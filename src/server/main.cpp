@@ -11,8 +11,10 @@ void reset(int){
 
 
 int main(int argc, char* argv[]){
+    
     std::string ip = argv[1];
     uint16_t port = atoi(argv[2]);
+
     signal(SIGINT, reset);
     InetAddress addr(ip, port);
     EventLoop loop;
